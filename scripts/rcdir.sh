@@ -236,8 +236,8 @@ listAllSyncDirs ()
     do
         Conf=$(rclone config show "${_REMOTE_}")
         Id=${_REMOTE_%?}
-        Type=$(echo "$Conf" | grep "^type" | cut -f 2 -d '=' | xargs)
-        Token=$(echo "$Conf" | grep "^token" | cut -f 2 -d '=' | xargs)
+        Type=$(echo "$Conf" | grep "^type" | cut -f 2 -d '=' | xargs -0)
+        Token=$(echo "$Conf" | grep "^token" | cut -f 2 -d '=' | xargs -0)
 
         printf "${_REMOTE_TABLE_FORMAT_}...\n" $Id $Type ${Token:14}
     done <<< "$(rclone listremotes)"
@@ -335,10 +335,10 @@ loadSyncList ()
     _SYNC_LIST_=()
 
     while read -r _LINE_; do
-        SyncId="$(echo $_LINE_ | cut -f 1 -d "${_DELIM_}" | xargs)"
-        LocalDir="$(echo $_LINE_ | cut -f 2 -d "${_DELIM_}" | xargs)"
-        RemoteDir="$(echo $_LINE_ | cut -f 3 -d "${_DELIM_}" | xargs)"
-        FirstTime="$(echo $_LINE_ | cut -f 4 -d "${_DELIM_}" | xargs)"
+        SyncId="$(echo $_LINE_ | cut -f 1 -d "${_DELIM_}" | xargs -0)"
+        LocalDir="$(echo $_LINE_ | cut -f 2 -d "${_DELIM_}" | xargs -0)"
+        RemoteDir="$(echo $_LINE_ | cut -f 3 -d "${_DELIM_}" | xargs -0)"
+        FirstTime="$(echo $_LINE_ | cut -f 4 -d "${_DELIM_}" | xargs -0)"
 
         _SYNC_LIST_[$_SYNC_LIST_SIZE_,1]=$SyncId
         _SYNC_LIST_[$_SYNC_LIST_SIZE_,2]=$LocalDir
@@ -437,11 +437,13 @@ function sync {
 
     rclone bisync "$LocalDir" "$RemoteDir" \
         --filters-file $_CONF_DIR_/filter.txt \
+        --create-empty-src-dirs \
+        --compare size,modtime,checksum \
+        --slow-hash-sync-only \
+        --resilient -MvP \
+        --drive-skip-gdocs --fix-case \
+        --conflict-resolve 'larger' \
         $ReSyncOpt
-        # --conflict-resolve 'larger' \
-        # --recover \
-        # --drive-skip-gdocs \
-        # --checksum \
 
     __err__=$?
 
